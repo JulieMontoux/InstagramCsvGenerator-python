@@ -24,10 +24,10 @@
         source instagram_env/bin/activate
         ```
 
-3. **Instaloader :** Installez la bibliothèque Instaloader à l'aide de la commande suivante dans votre terminal ou invite de commande :
+3. **Requirements :** Installez toutes les dépendances nécessaires à l'aide de la commande suivante dans votre terminal ou invite de commande :
 
     ```bash
-    pip install instaloader
+    pip install -r requirements.txt
     ```
 
 ## Utilisation
