@@ -3,7 +3,7 @@ import instaloader
 import csv
 import threading
 
-def get_followers_and_following(username, password):
+def get_followers_and_following(username, password, target_username):
     # Créer une instance d'Instaloader
     L = instaloader.Instaloader()
 
@@ -11,7 +11,7 @@ def get_followers_and_following(username, password):
     L.login(username, password)
 
     # Récupérer le profil de l'utilisateur cible
-    profile = instaloader.Profile.from_username(L.context, username)
+    profile = instaloader.Profile.from_username(L.context, target_username)
 
     # Récupérer les followers
     followers = set(profile.get_followers())
@@ -21,9 +21,9 @@ def get_followers_and_following(username, password):
 
     return followers, following
 
-def generate_csv(username, password):
+def generate_csv(username, password, target_username):
     # Récupérer les followers et les personnes suivies
-    followers, following = get_followers_and_following(username, password)
+    followers, following = get_followers_and_following(username, password, target_username)
 
     # Trouver les correspondances entre les followers et les personnes suivies
     matching_usernames = followers.intersection(following)
@@ -65,8 +65,11 @@ def main():
     username = input("Entrez votre nom d'utilisateur Instagram : ")
     password = input("Entrez votre mot de passe Instagram : ")
 
+    # Demander le nom d'utilisateur du compte cible
+    target_username = input("Entrez le nom d'utilisateur du compte cible : ")
+
     # Lancer la génération des CSV dans un thread séparé
-    threading.Thread(target=generate_csv, args=(username, password)).start()
+    threading.Thread(target=generate_csv, args=(username, password, target_username)).start()
 
 if __name__ == '__main__':
     main()
