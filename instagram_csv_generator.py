@@ -1,75 +1,65 @@
-import os
-import instaloader
-import csv
-import threading
+import requests
+from bs4 import BeautifulSoup
 
-def get_followers_and_following(username, password, target_username):
-    # Créer une instance d'Instaloader
-    L = instaloader.Instaloader()
+def get_usernames(username):
+    following_usernames = []
+    followers_usernames = []
 
-    # Se connecter à Instagram
-    L.login(username, password)
+    # URL de la page de profil d'utilisateur sur Instagram pour les personnes suivies
+    following_url = f"https://www.instagram.com/{username}/following/"
 
-    # Récupérer le profil de l'utilisateur cible
-    profile = instaloader.Profile.from_username(L.context, target_username)
+    # Effectuer une requête GET pour obtenir le contenu de la page des personnes suivies
+    following_response = requests.get(following_url)
+    if following_response.status_code == 200:
+        # Utiliser BeautifulSoup pour analyser le contenu HTML de la page
+        following_soup = BeautifulSoup(following_response.text, 'html.parser')
 
-    # Récupérer les followers
-    followers = set(profile.get_followers())
+        # Trouver les balises <span> contenant les noms d'utilisateur des personnes suivies
+        following_section = following_soup.find('span', class_='_ap3a _aaco _aacw _aacx _aad7 _aade')
+        following_usernames = extract_usernames_from_section(following_section)
+    else:
+        print("Erreur : Impossible de récupérer les personnes suivies.")
 
-    # Récupérer les personnes suivies
-    following = set(profile.get_followees())
+    # URL de la page de profil d'utilisateur sur Instagram pour les abonnés
+    followers_url = f"https://www.instagram.com/{username}/followers/"
 
-    return followers, following
+    # Effectuer une requête GET pour obtenir le contenu de la page des abonnés
+    followers_response = requests.get(followers_url)
+    if followers_response.status_code == 200:
+        # Utiliser BeautifulSoup pour analyser le contenu HTML de la page
+        followers_soup = BeautifulSoup(followers_response.text, 'html.parser')
 
-def generate_csv(username, password, target_username):
-    # Récupérer les followers et les personnes suivies
-    followers, following = get_followers_and_following(username, password, target_username)
+        # Trouver les balises <span> contenant les noms d'utilisateur des abonnés
+        followers_section = followers_soup.find('span', class_='_ap3a _aaco _aacw _aacx _aad7 _aade')
+        followers_usernames = extract_usernames_from_section(followers_section)
+    else:
+        print("Erreur : Impossible de récupérer les abonnés.")
 
-    # Trouver les correspondances entre les followers et les personnes suivies
-    matching_usernames = followers.intersection(following)
-    non_matching_followers = followers - following
-    non_matching_following = following - followers
+    return following_usernames, followers_usernames
 
-    # Créer un dossier pour stocker les fichiers CSV s'il n'existe pas déjà
-    if not os.path.exists('data'):
-        os.makedirs('data')
-
-    # Enregistrer les correspondances dans un fichier CSV
-    with open('data/correspondances.csv', 'w', newline='') as csvfile:
-        fieldnames = ['username']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        for user in matching_usernames:
-            writer.writerow({'username': user.username})
-
-    # Enregistrer les non-correspondances des followers dans un fichier CSV
-    with open('data/non_correspondances_followers.csv', 'w', newline='') as csvfile:
-        fieldnames = ['username']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        for user in non_matching_followers:
-            writer.writerow({'username': user.username})
-
-    # Enregistrer les non-correspondances des personnes suivies dans un fichier CSV
-    with open('data/non_correspondances_following.csv', 'w', newline='') as csvfile:
-        fieldnames = ['username']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        for user in non_matching_following:
-            writer.writerow({'username': user.username})
-
-    return "Fichiers CSV enregistrés avec succès."
+def extract_usernames_from_section(section):
+    if section:
+        # Extraire les noms d'utilisateur à partir des balises <a> dans la section
+        usernames = [a.text for a in section.find_all('a')]
+        return usernames
+    else:
+        print("Erreur : Aucune section trouvée.")
+        return []
 
 def main():
-    # Entrer les informations d'identification
-    username = input("Entrez votre nom d'utilisateur Instagram : ")
-    password = input("Entrez votre mot de passe Instagram : ")
+    # Nom d'utilisateur Instagram
+    username = input("Entrez le nom d'utilisateur Instagram : ")
 
-    # Demander le nom d'utilisateur du compte cible
-    target_username = input("Entrez le nom d'utilisateur du compte cible : ")
+    # Récupérer les noms d'utilisateur des personnes suivies et des abonnés
+    following_usernames, followers_usernames = get_usernames(username)
 
-    # Lancer la génération des CSV dans un thread séparé
-    threading.Thread(target=generate_csv, args=(username, password, target_username)).start()
+    if following_usernames and followers_usernames:
+        print("Noms d'utilisateur des personnes suivies :")
+        print(following_usernames)
+        print("\nNoms d'utilisateur des abonnés :")
+        print(followers_usernames)
+    else:
+        print("Impossible de récupérer les données du profil.")
 
 if __name__ == '__main__':
     main()
